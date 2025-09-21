@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Patrick+Hand&family=Press+Start+2P&display=swap" rel="stylesheet">
+</head>
+<style>
+    body {
+        font-family: Arial, Helvetica, sans-serif;
+        display: flex;
+        justify-content: center;
+        margin-top: 30px;
+    }
+
+    table { border-collapse: collapse; }
+
+    td {
+        width: 40px;
+        height: 40px;
+        text-align: center;
+        vertical-align: middle;
+        border: 1px solid #444;
+        font-size: 18px;
+    }
+
+    input {
+        font-family: "Patrick Hand", cursive;
+        font-weight: 400;
+        font-style: normal;
+        width: 90%;
+        height: 90%;
+        text-align: center;
+        font-size: 18px;
+        border: none;
+        outline: none;
+    }
+
+    table { border: 3px solid #000; }
+    .wrong { background: #fbb; }
+    .correct { background: #bfb; }
+</style>
+<body>
+    <div>
+        <h2>Sudoku Puzzle</h2>
+        <table id="sudoku"></table>
+    </div>
+</body>
+<script>
+
+const maxSize = 9;
+const boxSize = Math.sqrt(maxSize);
+
+    function CreateArray() {
+        const numsArray = [];
+        for (let g = 1; g <= maxSize; g++) {
+            numsArray.push(g);
+        }
+        return numsArray;
+    }
+    const numsArray = CreateArray();
+
+    function shuffle(arr) {
+        for (let i = arr.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [arr[i], arr[j]] = [arr[j], arr[i]]
+        }
+        return arr;
+    }
+
+function sudokuGenerator(k) {
+    let grid = Array.from({ length: maxSize }, () => Array(maxSize).fill(0));
+
+    let rowUsed = Array.from({ length: maxSize }, () => new Set());
+    let colUsed = Array.from({ length: maxSize }, () => new Set());
+    let boxUsed = Array.from({ length: maxSize }, () => new Set());
+
+    function boxIndex(i, j) {
+        return Math.floor(i / boxSize) * boxSize + Math.floor(j / boxSize);
+    }
+
+    function isSafe(i, j, num) {
+        return !rowUsed[i].has(num) && !colUsed[j].has(num) && !boxUsed[boxIndex(i, j)].has(num);
+    }
+
+    function placeNumber(i, j, num) {
+        grid[i][j] = num;
+        rowUsed[i].add(num);
+        colUsed[j].add(num);
+        boxUsed[boxIndex(i, j)].add(num);
+    }
+
+    function removeNumber(i, j, num) {
+        grid[i][j] = 0;
+        rowUsed[i].delete(num);
+        colUsed[j].delete(num);
+        boxUsed[boxIndex(i, j)].delete(num);
+    }
+
+    function fillBox(row, col) {
+        let nums = shuffle([...numsArray]);
+        let k = 0;
+        for (let i = 0; i < boxSize; i++) {
+            for (let j = 0; j < boxSize; j++) {
+                placeNumber(row + i, col + j, nums[k++]);
+            }
+        }
+    }
+
+    function fillDiagonal() {
+        for (let i = 0; i < maxSize; i += boxSize) {
+            fillBox(i, i);
+        }
+    }
+
+    function fillRemaining(i, j) {
+        if (i === maxSize) return true;
+        if (j === maxSize) return fillRemaining(i + 1, 0);
+
+        if (grid[i][j] !== 0) return fillRemaining(i, j + 1);
+
+        let nums = shuffle([...numsArray]);
+        for (let num of nums) {
+            if (isSafe(i, j, num)) {
+                placeNumber(i, j, num);
+                if (fillRemaining(i, j + 1)) return true;
+                removeNumber(i, j, num);
+            }
+        }
+        return false;
+    }
+
+    function removeDigits(k) {
+        let cells = shuffle([...Array(maxSize*maxSize).keys()]);
+        for (let idx = 0; idx < k; idx++) {
+            let i = Math.floor(cells[idx] / maxSize);
+            let j = cells[idx] % maxSize;
+            grid[i][j] = 0;
+        }
+    }
+
+    fillDiagonal();
+    fillRemaining(0, 0);
+    let solution = grid.map(row => [...row]);
+    removeDigits(k);
+    return {sudoku: grid, solution};
+}
+
+    function addThickBorders(table, boxSize) {
+        const rows = table.rows;
+        const size = rows.length;
+        
+        for (let i = 0; i < size; i++) {
+            for (let j = 0; j < size; j++) {
+                const cell = rows[i].cells[j];
+
+                if ((j + 1) % boxSize === 0 && j !== size - 1) {
+                    cell.style.borderRight = "3px solid #000";
+                }
+
+                if ((i + 1) % boxSize === 0 && j !== size - 0) {
+                    cell.style.borderBottom = "3px solid #000";
+                }
+            }
+        }   
+    }
+
+
+    let {sudoku, solution} = sudokuGenerator(10);
+    let table = document.getElementById("sudoku");
+
+    sudoku.forEach((row, i) => {
+        let tr = document.createElement("tr");
+        row.forEach((val, j) => {
+            let td = document.createElement("td");
+            if (val === 0) {
+                let input = document.createElement("input");
+                input.type = "text";
+                input.maxLength = 1;
+                input.dataset.row = i;
+                input.dataset.col = j;
+                input.oninput = function() {
+                    this.value = this.value.replace(/[^1-9]/g,""); // only allows 1-9
+                    let r =+ this.dataset.row, c =+ this.dataset.col;
+                    if (this.value === "") {
+                        this.classList.remove("correct", "wrong")
+                    } else if (+this.value===solution[r][c]) {
+                        this.classList.add("correct");
+                        this.classList.remove("wrong");
+                    } else {
+                        this.classList.add("wrong");
+                        this.classList.remove("correct");
+                    };
+                };
+                td.appendChild(input);
+            } else {
+                td.textContent = val;
+            }
+            tr.appendChild(td);
+        });
+        table.appendChild(tr);
+    });
+
+    addThickBorders(table, boxSize);
+
+    /*
+    const ar = [1, 2, 3, 4, 5, 6, 7, 8, 9];
+    const sudoku = [];
+
+    function randomDigits() {
+        const v = Math.floor(Math.random() * ar.length);
+        return ar.splice(v, 1)[0];
+    }
+    
+    for (let i = 0; i < 9; i++) {
+        sudoku[i] = randomDigits()
+    };
+
+    console.log(sudoku)
+    // arr = sudoku.slice(3).concat(sudoku.slice(0, 3));
+    // console.log(arr);
+    let s = sudoku.slice(0, 3);
+
+    let value = value.concat(s);
+    value = value.concat(s.slice(-1).concat(middle.slice(0, -1)));
+    value = value.concat(s.slice(-1).concat(middle.slice(0, -1)));
+
+    let middle = sudoku.slice(3, 6);
+    let e = sudoku.slice(6, 9);
+    let m2 = middle.slice(-1).concat(middle.slice(0, -1));
+    console.log(middle)
+    console.log(value)
+
+    /*
+    arr = sudoku.slice(3).concat(sudoku.slice(0, 3));
+    console.log(arr);
+    arr = arr.concat(arr.slice(3).concat(arr.slice(0, 3)));
+    arr = arr.concat(arr.slice(3).concat(arr.slice(0, 3)));
+    console.log(arr);
+    */
+</script>
+</html>
