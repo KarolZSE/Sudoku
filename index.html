@@ -14,6 +14,10 @@
         display: flex;
         justify-content: center;
         margin-top: 30px;
+
+        background-color: #fdfcf7;
+        background-image: url("back.jpg");
+        background-repeat: repeat;
     }
 
     table { border-collapse: collapse; }
@@ -25,6 +29,7 @@
         vertical-align: middle;
         border: 1px solid #444;
         font-size: 18px;
+        background-color: white;
     }
 
     input {
@@ -42,17 +47,77 @@
     table { border: 3px solid #000; }
     .wrong { background: #fbb; }
     .correct { background: #bfb; }
+
+    #menu {
+        width: 100%;
+        height: 100%;
+        text-align: center;
+        display: flex;
+        top: 50%;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+    }
+
+    #GameStart {
+        width: 80%;
+        font-family: Arial, Helvetica, sans-serif;
+    }
+
+    #align {
+        position: absolute;
+        height: 50vh;
+        top: 40%;
+        left: 50%;
+        transform: translate(-50%, -40%);
+    }
+
+    #Game {
+        text-align: center;
+    }
+    
+    #Timer {
+        font-size: 18px;
+    }
 </style>
 <body>
-    <div>
-        <h2>Sudoku Puzzle</h2>
+    <div id="align">
+        <div id="menu">
+            <h1 id="Text">Welcome to my simple sudoku</h1>
+            <h3 id="BST">You will have a 9x9 sudoku <br> (Any board bigger then 25x25 requires a nasa PC to render)</h3>
+            <input type="range" id="BoardSize" min="3" max="10" value="3" />
+            <h3 title="This statistic lets you pick how many numbers will be hidden and you (the player) will have to fill them in." id="MT">There will be 30 squares missing <sup>[?]</sup></h3>
+            <input type="range" id="Missing" min="1" max="81" value="30"/>
+            <br>
+            <button id="GameStart">I'm ready!</button>
+        </div>
+    </div>
+    <div id="Game">
+        <h2 id="Timer"></h2>
         <table id="sudoku"></table>
     </div>
 </body>
 <script>
+const Text = document.getElementById("Text");
+const MT = document.getElementById("MT");
+const Miss = document.getElementById("Missing");
+const BST = document.getElementById("BST");
+const BS = document.getElementById("BoardSize");
 
-const maxSize = 9;
-const boxSize = Math.sqrt(maxSize);
+BS.oninput = function() {
+    BST.innerHTML = "You will have a " + (BS.value * BS.value) + "x" + (BS.value * BS.value) + " sudoku <br> (Any board bigger then 25x25 requires a nasa PC to render)";
+    Miss.max = Math.pow(BS.value, 4);
+    MT.innerHTML = "There will be " + Miss.value + " squares missing <sup>[?]</sup>";
+}
+
+Miss.oninput = function() {
+    MT.innerHTML = "There will be " + Miss.value + " squares missing <sup>[?]</sup>";
+}
+
+document.getElementById("GameStart").onclick = function() {
+    document.getElementById("menu").style.display = "none";
+const maxSize = BS.value * BS.value;
+const boxSize = BS.value * 1;
 
     function CreateArray() {
         const numsArray = [];
@@ -169,8 +234,9 @@ function sudokuGenerator(k) {
     }
 
 
-    let {sudoku, solution} = sudokuGenerator(10);
+    let {sudoku, solution} = sudokuGenerator(Miss.value * 1);
     let table = document.getElementById("sudoku");
+    document.getElementById("Game").style.display = "";
 
     sudoku.forEach((row, i) => {
         let tr = document.createElement("tr");
@@ -179,11 +245,11 @@ function sudokuGenerator(k) {
             if (val === 0) {
                 let input = document.createElement("input");
                 input.type = "text";
-                input.maxLength = 1;
+                input.maxLength = 2;
                 input.dataset.row = i;
                 input.dataset.col = j;
                 input.oninput = function() {
-                    this.value = this.value.replace(/[^1-9]/g,""); // only allows 1-9
+                    this.value = this.value.replace(/[^0-9]/g,""); // only allows 1-9
                     let r =+ this.dataset.row, c =+ this.dataset.col;
                     if (this.value === "") {
                         this.classList.remove("correct", "wrong")
@@ -194,6 +260,7 @@ function sudokuGenerator(k) {
                         this.classList.add("wrong");
                         this.classList.remove("correct");
                     };
+                checkCompletion();
                 };
                 td.appendChild(input);
             } else {
@@ -205,7 +272,51 @@ function sudokuGenerator(k) {
     });
 
     addThickBorders(table, boxSize);
+    const Time = Date.now();
 
+    let Timon = setInterval(() => {
+        document.getElementById("Timer").textContent = "You had spend " + Math.floor((Date.now() - Time) / 1000) + " seconds on this sudoku.";
+    }, 1000);
+    document.getElementById("Timer").textContent = "You had spend " + Math.floor((Date.now() - Time) / 1000) + " seconds on this sudoku.";
+
+    function checkCompletion() {
+        let allFilled = true;
+        let allCorrect = true;
+
+        const inputs = table.querySelectorAll("input");
+
+        inputs.forEach(input => {
+            const r = +input.dataset.row;
+            const c = +input.dataset.col;
+
+            if (input.value === "") {
+                allFilled = false;
+                input.classList.remove("correct", "wrong")
+            } else if (+input.value===solution[r][c]) {
+                input.classList.add("correct");
+                input.classList.remove("wrong");
+            } else {
+                input.classList.add("wrong");
+                input.classList.remove("correct");
+                allCorrect = false;
+            }
+        });
+        
+        if (!allFilled) {
+            console.log("CellE");
+        } else if (!allCorrect) {
+            console.log("CFI");
+        } else {
+            console.log("Done");
+            document.getElementById("menu").style.display = "flex";
+            clearInterval(Timon);
+            document.getElementById("Game").style.display = "none";
+            table.innerHTML = ""
+            Text.style.color = "green";
+            Text.textContent = "Congratulations! You completed your " + (BS.value * BS.value) + "x" + (BS.value * BS.value)  + " sudoku in " + Math.floor((Date.now() - Time) / 1000) + " seconds!";
+        }
+    }
+}
     /*
     const ar = [1, 2, 3, 4, 5, 6, 7, 8, 9];
     const sudoku = [];
