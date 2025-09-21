@@ -14,5 +14,5 @@ While picking the number of squares missing here is a table of difficulty:
 | **16×16 board** | ~60–80 missing   | ~81–100 missing  | ~101–120+ missing |
 | **25×25 board** | ~120–160 missing | ~161–200 missing | ~201–250+ missing |
 
-#Important for mobile users!
+# Important for mobile users!
 In my experience the 9x9 board loads perfectly hovewer a 16x16 board overflows. Soo for bigger boards please switch to a pc.
